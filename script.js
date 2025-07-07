@@ -1,16 +1,4 @@
 document.addEventListener("DOMContentLoaded", function (event) {
-  let storedExpense = localStorage.getItem("expense");
-  let expenses = [];
-
-  if (storedExpense) {
-    try {
-      expenses = JSON.parse(storedExpense);
-    } catch (e) {
-      console.error("Failed to parse expense data:", e);
-      expenses = [];
-    }
-  }
-
   const expenseForm = document.getElementById("expense-form");
   const expenseInput = document.getElementById("expense-name");
 
@@ -20,6 +8,18 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
   let totalExpense = document.getElementById("total-amount");
 
+  let expenses = localStorage.getItem("savedExpenses");
+  if (expenses) {
+    try {
+      expenses = JSON.parse(localStorage.getItem("savedExpenses"));
+      renderExpense();
+    } catch (error) {
+      expenses = [];
+    }
+  }
+
+  let totalAmount = calculateTotal();
+
   expenseForm.addEventListener("submit", function (e) {
     e.preventDefault();
 
@@ -27,33 +27,54 @@ document.addEventListener("DOMContentLoaded", function (event) {
     const expenseAmount = parseInt(expenseAmountInput.value);
     if (expenseAmount != "" && !isNaN(expenseAmount) && expenseAmount > 0) {
       const newExpense = {
-        id: Date.now,
+        id: Date.now(),
         name: expenseName,
         amount: expenseAmount,
       };
       expenses.push(newExpense);
-      const li = document.createElement("li");
-      li.classList.add("data-id");
-      li.innerHTML = `<span>${expenseName} - ${expenseAmount}</span>`;
-      expenseList.appendChild(li);
 
       saveExpense(expenses);
+      expenseInput.value = "";
+      expenseAmountInput.value = "";
+      renderExpense();
+
+      updateTotal();
     }
   });
 
-  renderExpense();
   function saveExpense(expenses) {
-    localStorage.setItem("expense", JSON.stringify(expenses));
+    localStorage.setItem("savedExpenses", JSON.stringify(expenses));
   }
 
   function renderExpense() {
-    console.log(storedExpense);
-
-    storedExpense.forEach((expense) => {
+    expenseList.innerHTML = "";
+    expenses.forEach((expense) => {
       const li = document.createElement("li");
-      li.classList.add("data-id");
-      li.innerHTML = `<span>${expense.name} - ${expense.amount}</span>`;
+
+      li.innerHTML = `<span>${expense.name} - $${expense.amount}</span><button data-id="${expense.id}">Delete</button>`;
       expenseList.appendChild(li);
     });
+    updateTotal();
   }
+
+  function calculateTotal() {
+    return expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  }
+
+  function updateTotal() {
+    totalAmount = calculateTotal();
+    totalExpense.textContent = totalAmount;
+  }
+
+  expenseList.addEventListener("click", function (event) {
+    if (event.target.tagName == "BUTTON") {
+      const expenseId = parseInt(event.target.getAttribute("data-id"));
+
+      expenses = expenses.filter((expense) => expenseId !== expense.id);
+      console.log(expenses);
+      saveExpense();
+      renderExpense();
+      updateTotal();
+    }
+  });
 });
